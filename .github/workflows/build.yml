@@ -22,7 +22,7 @@ jobs:
           setx LC_ALL zh_CN.UTF-8
           setx LANG zh_CN.UTF-8
         shell: cmd
-        # 注意：setx 更改环境变量需重启生效，这里仅作为参考，实际效果有限
+
 
       - name: Clean output directory
         run: |
@@ -40,12 +40,12 @@ jobs:
 
       - name: Verify Unicode Support (Optional Test)
         run: |
-          # 简单验证编译是否成功并检查可执行文件
+
           if not exist x64\Release\RBTray.exe (
             echo "Build failed: RBTray.exe not found"
             exit 1
           )
-          # 这里无法直接运行并检查托盘文本（需图形界面），但可检查文件大小
+
           for /f "tokens=*" %i in ('dir x64\Release\RBTray.exe ^| findstr "RBTray.exe"') do echo %i
         shell: cmd
 
@@ -54,4 +54,4 @@ jobs:
         with:
           name: RBTray-exe
           path: x64/Release/RBTray.exe
-          if-no-files-found: error  # 改为 error，确保缺失文件时失败
+          if-no-files-found: error
