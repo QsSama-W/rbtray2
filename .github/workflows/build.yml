@@ -1,0 +1,45 @@
+name: Build RBTray
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Set environment variables
+        run: |
+          chcp 65001
+          setx LC_ALL en_US.UTF-8
+          setx LANG en_US.UTF-8
+        shell: cmd
+
+      - name: Clean output directory
+        run: |
+          if exist x64\Release (rd /s /q x64\Release)
+          mkdir x64\Release
+        shell: cmd
+
+      - name: Build RBTray with Unicode
+        run: msbuild RBTray.sln -p:Configuration=Release -p:Platform=x64 -p:OutDir=.\x64\Release\ -property:CharacterSet=Unicode -p:DefineConstants="UNICODE;_UNICODE"
+        shell: cmd
+
+      - name: Debug - List directory contents
+        run: dir x64\Release /s
+        shell: cmd
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: RBTray-exe
+          path: x64/Release/RBTray.exe
+          if-no-files-found: warn    
