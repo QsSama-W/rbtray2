@@ -23,7 +23,6 @@ jobs:
           setx LANG zh_CN.UTF-8
         shell: cmd
 
-
       - name: Clean output directory
         run: |
           if exist x64\Release (rd /s /q x64\Release)
@@ -38,15 +37,15 @@ jobs:
         run: dir x64\Release /s
         shell: cmd
 
-      - name: Verify Unicode Support (Optional Test)
+      - name: Verify Unicode Support
         run: |
-
+          REM 验证编译是否成功并检查可执行文件
           if not exist x64\Release\RBTray.exe (
-            echo "Build failed: RBTray.exe not found"
-            exit 1
+            echo Build failed: RBTray.exe not found
+            exit /b 1
           )
-
-          for /f "tokens=*" %i in ('dir x64\Release\RBTray.exe ^| findstr "RBTray.exe"') do echo %i
+          REM 检查文件大小
+          dir x64\Release\RBTray.exe | findstr "RBTray.exe"
         shell: cmd
 
       - name: Upload artifact
