@@ -196,10 +196,10 @@ void ExecuteMenu() {
         MessageBox(NULL, L"Error creating menu.", L"RBTray", MB_OK | MB_ICONERROR);
         return;
     }
-    AppendMenu(hMenu, MF_STRING, IDM_EXIT,    L"Exit RBTray");
-    AppendMenu(hMenu, MF_SEPARATOR, 0, NULL); //--------------
-    AppendMenu(hMenu, MF_STRING, IDM_CLOSE,   L"Close Window");
     AppendMenu(hMenu, MF_STRING, IDM_RESTORE, L"Open Window");
+    AppendMenu(hMenu, MF_STRING, IDM_CLOSE,   L"Close Window");
+    AppendMenu(hMenu, MF_SEPARATOR, 0, NULL); //--------------
+    AppendMenu(hMenu, MF_STRING, IDM_EXIT,    L"Exit");
 
     GetCursorPos(&point);
     SetForegroundWindow(_hwndHook);
