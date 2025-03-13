@@ -1,0 +1,38 @@
+name: Build RBHook DLL
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Clean output directory
+        run: |
+          if exist x64\Release (rd /s /q x64\Release)
+          mkdir x64\Release
+        shell: cmd
+
+      - name: Build RBHook as DLL
+        run: msbuild RBHook.vcxproj -p:Configuration=Release -p:Platform=x64 -p:OutDir=.\x64\Release\
+        shell: cmd
+
+      - name: Debug - List directory contents
+        run: dir x64\Release /s
+        shell: cmd
+
+      - name: Upload DLL artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: RBHook-dll
+          path: x64/Release/RBHook.dll
+          if-no-files-found: warn
