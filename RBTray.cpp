@@ -34,6 +34,7 @@ static HWND _hwndHook;
 static HWND _hwndItems[MAXTRAYITEMS];
 static HWND _hwndForMenu;
 
+// 在系统托盘列表中查找窗口句柄
 int FindInTray(HWND hwnd) {
     for (int i = 0; i < MAXTRAYITEMS; i++) {
         if (_hwndItems[i] == hwnd) {
@@ -43,6 +44,7 @@ int FindInTray(HWND hwnd) {
     return -1;
 }
 
+// 获取窗口的图标
 HICON GetWindowIcon(HWND hwnd) {
     HICON icon;
     if (icon = (HICON)SendMessage(hwnd, WM_GETICON, ICON_SMALL, 0)) {
@@ -60,6 +62,7 @@ HICON GetWindowIcon(HWND hwnd) {
     return LoadIcon(NULL, IDI_WINLOGO);
 }
 
+// 将窗口添加到系统托盘
 static bool AddToTray(int i) {
     NOTIFYICONDATA nid;
     ZeroMemory(&nid, sizeof(nid));
@@ -81,6 +84,7 @@ static bool AddToTray(int i) {
     return true;
 }
 
+// 将窗口添加到系统托盘
 static bool AddWindowToTray(HWND hwnd) {
     int i = FindInTray(NULL);
     if (i == -1) {
@@ -90,29 +94,27 @@ static bool AddWindowToTray(HWND hwnd) {
     return AddToTray(i);
 }
 
+// 将窗口最小化到系统托盘
 static void MinimizeWindowToTray(HWND hwnd) {
-    // Don't minimize MDI child windows
+    // 不处理 MDI 子窗口的最小化操作
     if ((UINT)GetWindowLongPtr(hwnd, GWL_EXSTYLE) & WS_EX_MDICHILD) {
         return;
     }
 
-    // If hwnd is a child window, find parent window (e.g. minimize button in
-    // Office 2007 (ribbon interface) is in a child window)
+    // 如果 hwnd 是子窗口，找到其父窗口（例如，Office 2007（ ribbon 界面）中的最小化按钮位于子窗口中）
     if ((UINT)GetWindowLongPtr(hwnd, GWL_STYLE) & WS_CHILD) {
         hwnd = GetAncestor(hwnd, GA_ROOT);
     }
 
-    // Hide window before AddWindowToTray call because sometimes RefreshWindowInTray
-    // can be called from inside ShowWindow before program window is actually hidden
-    // and as a result RemoveWindowFromTray is called which immediately removes just
-    // added tray icon.
+    // 在调用 AddWindowToTray 之前隐藏窗口，因为有时在程序窗口实际隐藏之前，RefreshWindowInTray 可能会从 ShowWindow 内部调用，
+    // 结果会调用 RemoveWindowFromTray，从而立即移除刚刚添加的系统托盘图标。
     ShowWindow(hwnd, SW_MINIMIZE);
     ShowWindow(hwnd, SW_HIDE);
 
-    // Add icon to tray if it's not already there
+    // 如果窗口还不在系统托盘中，则添加图标
     if (FindInTray(hwnd) == -1) {
         if (!AddWindowToTray(hwnd)) {
-          // If there is something wrong with tray icon restore program window.
+          // 如果系统托盘图标添加失败，则恢复程序窗口。
           ShowWindow(hwnd, SW_RESTORE);
           ShowWindow(hwnd, SW_SHOW);
           SetForegroundWindow(hwnd);
@@ -121,6 +123,7 @@ static void MinimizeWindowToTray(HWND hwnd) {
     }
 }
 
+// 从系统托盘中移除窗口
 static bool RemoveFromTray(int i) {
     NOTIFYICONDATA nid;
     ZeroMemory(&nid, sizeof(nid));
@@ -133,6 +136,7 @@ static bool RemoveFromTray(int i) {
     return true;
 }
 
+// 从系统托盘中移除窗口
 static bool RemoveWindowFromTray(HWND hwnd) {
     int i = FindInTray(hwnd);
     if (i == -1) {
@@ -145,6 +149,7 @@ static bool RemoveWindowFromTray(HWND hwnd) {
     return true;
 }
 
+// 从系统托盘恢复窗口
 static void RestoreWindowFromTray(HWND hwnd) {
     ShowWindow(hwnd, SW_RESTORE);
     ShowWindow(hwnd, SW_SHOW);
@@ -152,9 +157,10 @@ static void RestoreWindowFromTray(HWND hwnd) {
     RemoveWindowFromTray(hwnd);
 }
 
+// 从系统托盘关闭窗口
 static void CloseWindowFromTray(HWND hwnd) {
-    // Use PostMessage to avoid blocking if the program brings up a dialog on exit.
-    // Also, Explorer windows ignore WM_CLOSE messages from SendMessage.
+    // 使用 PostMessage 避免在程序退出时弹出对话框导致阻塞。
+    // 此外，资源管理器窗口会忽略 SendMessage 发送的 WM_CLOSE 消息。
     PostMessage(hwnd, WM_CLOSE, 0, 0);
 
     Sleep(50);
@@ -163,11 +169,12 @@ static void CloseWindowFromTray(HWND hwnd) {
     }
 
     if (!IsWindow(hwnd)) {
-        // Closed successfully
+        // 成功关闭
         RemoveWindowFromTray(hwnd);
     }
 }
 
+// 刷新系统托盘中的窗口信息
 void RefreshWindowInTray(HWND hwnd) {
     int i = FindInTray(hwnd);
     if (i == -1) {
@@ -187,20 +194,21 @@ void RefreshWindowInTray(HWND hwnd) {
     }
 }
 
+// 执行系统托盘菜单
 void ExecuteMenu() {
     HMENU hMenu;
     POINT point;
 
     hMenu = CreatePopupMenu();
     if (!hMenu) {
-        MessageBox(NULL, L"Error creating menu.", L"RBTray", MB_OK | MB_ICONERROR);
+        MessageBox(NULL, L"创建菜单时出错。", L"RBTray", MB_OK | MB_ICONERROR);
         return;
     }
-    AppendMenu(hMenu, MF_STRING, IDM_ABOUT,   L"About RBTray");
-    AppendMenu(hMenu, MF_STRING, IDM_EXIT,    L"Exit RBTray");
-    AppendMenu(hMenu, MF_SEPARATOR, 0, NULL); //--------------
-    AppendMenu(hMenu, MF_STRING, IDM_CLOSE,   L"Close Window");
-    AppendMenu(hMenu, MF_STRING, IDM_RESTORE, L"Restore Window");
+    AppendMenu(hMenu, MF_STRING, IDM_ABOUT,   L"关于 RBTray");
+    AppendMenu(hMenu, MF_STRING, IDM_EXIT,    L"退出 RBTray");
+    AppendMenu(hMenu, MF_SEPARATOR, 0, NULL); // 分隔线
+    AppendMenu(hMenu, MF_STRING, IDM_CLOSE,   L"关闭窗口");
+    AppendMenu(hMenu, MF_STRING, IDM_RESTORE, L"恢复窗口");
 
     GetCursorPos(&point);
     SetForegroundWindow(_hwndHook);
@@ -211,6 +219,7 @@ void ExecuteMenu() {
     DestroyMenu(hMenu);
 }
 
+// 关于对话框的处理过程
 BOOL CALLBACK AboutDlgProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam) {
     switch (Msg) {
         case WM_CLOSE:
@@ -232,6 +241,7 @@ BOOL CALLBACK AboutDlgProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam) {
     return TRUE;
 }
 
+// 钩子窗口的处理过程
 LRESULT CALLBACK HookWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
     switch (msg) {
         case WM_COMMAND:
@@ -281,7 +291,7 @@ LRESULT CALLBACK HookWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) 
 
             LONG style = GetWindowLong(fgWnd, GWL_STYLE);
             if (!(style & WS_MINIMIZEBOX)) {
-                // skip, no minimize box
+                // 跳过，没有最小化按钮
                 break;
             }
 
@@ -315,6 +325,7 @@ LRESULT CALLBACK HookWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) 
     return DefWindowProc(hwnd, msg, wParam, lParam);
 }
 
+// 程序入口点
 int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE /*hPrevInstance*/, _In_ LPSTR /*szCmdLine*/, _In_ int /*iCmdShow*/) {
     _hInstance = hInstance;
 
@@ -336,18 +347,18 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE /*hPrevInstance*
         if (shouldExit) {
             SendMessage(_hwndHook, WM_CLOSE, 0, 0);
         } else {
-            MessageBox(NULL, L"RBTray is already running.", L"RBTray", MB_OK | MB_ICONINFORMATION);
+            MessageBox(NULL, L"RBTray 已经在运行。", L"RBTray", MB_OK | MB_ICONINFORMATION);
         }
         return 0;
     }
 
     if (useHook) {
         if (!(_hLib = LoadLibrary(L"RBHook.dll"))) {
-            MessageBox(NULL, L"Error loading RBHook.dll.", L"RBTray", MB_OK | MB_ICONERROR);
+            MessageBox(NULL, L"加载 RBHook.dll 时出错。", L"RBTray", MB_OK | MB_ICONERROR);
             return 0;
         }
         if (!RegisterHook(_hLib)) {
-            MessageBox(NULL, L"Error setting hook procedure.", L"RBTray", MB_OK | MB_ICONERROR);
+            MessageBox(NULL, L"设置钩子过程时出错。", L"RBTray", MB_OK | MB_ICONERROR);
             return 0;
         }
     }
@@ -364,12 +375,12 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE /*hPrevInstance*
     wc.lpszMenuName  = NULL;
     wc.lpszClassName = NAME;
     if (!RegisterClass(&wc)) {
-        MessageBox(NULL, L"Error creating window class", L"RBTray", MB_OK | MB_ICONERROR);
+        MessageBox(NULL, L"创建窗口类时出错", L"RBTray", MB_OK | MB_ICONERROR);
         return 0;
     }
 
     if (!(_hwndHook = CreateWindow(NAME, NAME, WS_OVERLAPPED, 0, 0, 0, 0, (HWND)NULL, (HMENU)NULL, (HINSTANCE)hInstance, (LPVOID)NULL))) {
-        MessageBox(NULL, L"Error creating window", L"RBTray", MB_OK | MB_ICONERROR);
+        MessageBox(NULL, L"创建窗口时出错", L"RBTray", MB_OK | MB_ICONERROR);
         return 0;
     }
 
@@ -381,7 +392,7 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE /*hPrevInstance*
 
     BOOL registeredHotKey = RegisterHotKey(_hwndHook, 0, MOD_ALT | MOD_CONTROL, VK_DOWN);
     if (!registeredHotKey) {
-        MessageBox(NULL, L"Couldn't register hotkey", L"RBTray", MB_OK | MB_ICONERROR);
+        MessageBox(NULL, L"无法注册热键", L"RBTray", MB_OK | MB_ICONERROR);
     }
 
     MSG msg;
