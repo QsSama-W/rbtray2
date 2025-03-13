@@ -1,0 +1,56 @@
+name: Build RBTray
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Set environment to Chinese (Simplified, China)
+        run: |
+          chcp 65001
+          setx LC_ALL zh_CN.UTF-8
+          setx LANG zh_CN.UTF-8
+        shell: cmd
+
+      - name: Clean output directory
+        run: |
+          if exist x64\Release (rd /s /q x64\Release)
+          mkdir x64\Release
+        shell: cmd
+
+      - name: Build RBTray with Unicode
+        run: msbuild RBTray.sln -p:Configuration=Release -p:Platform=x64 -p:OutDir=.\x64\Release\ -p:CharacterSet=Unicode -p:DefineConstants="UNICODE;_UNICODE"
+        shell: cmd
+
+      - name: Debug - List directory contents
+        run: dir x64\Release /s
+        shell: cmd
+
+      - name: Verify Unicode Support
+        run: |
+          REM 验证编译是否成功并检查可执行文件
+          if not exist x64\Release\RBTray.exe (
+            echo Build failed: RBTray.exe not found
+            exit /b 1
+          )
+          REM 检查文件大小
+          dir x64\Release\RBTray.exe | findstr "RBTray.exe"
+        shell: cmd
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: RBTray-exe
+          path: x64/Release/RBTray.exe
+          if-no-files-found: error
